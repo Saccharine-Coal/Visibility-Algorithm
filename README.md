@@ -1,6 +1,6 @@
 # Visibility-Algorithm
 ## Demonstrations
-### Working
+### Working Visualization
 ### Ray Intersection Visualization
 ## Description
 This program utilizes segment segment intersections to calculate polygon-ray intersections from a given origin. With these intersections a simple  triangulation algorithm constructs triangles, or polygons, that represent the visibility relative to the oring. This visibilit is visualized with the Python library Pygame. Numpy is largely used for vector operations.
