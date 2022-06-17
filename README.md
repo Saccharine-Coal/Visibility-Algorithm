@@ -3,7 +3,7 @@
 ### Working
 ### Ray Intersection Visualization
 ## Description
-This program utilizes segment segment intersections to calculate intersections from a point. With these intersections a simple  triangulation algorithm constructs traingles, or polygons, that represent the visibility relative to the point. This visibilit is visualized with the Python library Pygame. Numpy is largely used for vector operations.
+This program utilizes segment segment intersections to calculate polygon-ray intersections from a given origin. With these intersections a simple  triangulation algorithm constructs triangles, or polygons, that represent the visibility relative to the oring. This visibilit is visualized with the Python library Pygame. Numpy is largely used for vector operations.
 ## Performance
 Performance, at best, decreases linearly with the number of vertices present. If we measure performance with fps (frames per second) and let n be the number of vertices, then the performance of the algorithm can be defined as:
 $$ performance(n) \propto {1 \over n} $$
