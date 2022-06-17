@@ -2,10 +2,10 @@
 
 ## Demonstrations
 ### Light Fading Visualization
-https://user-images.githubusercontent.com/69489271/174399135-76cf0c2a-0a3f-4415-96b7-cc95180c0634.mp4
+https://user-images.githubusercontent.com/69489271/174399904-47119bb4-7c8c-44d5-865e-823ffc9ae7a0.mp4
 
 ### Ray Intersection Visualization
-https://user-images.githubusercontent.com/69489271/174399098-8620e468-9184-4638-8cd0-d1c116f25668.mp4
+https://user-images.githubusercontent.com/69489271/174399929-5eae1aed-6d4a-4541-a6db-1f7802badbfb.mp4
 
 ## Description
 This program utilizes segment segment intersections to calculate polygon-ray intersections from a given origin. With these intersections a simple  triangulation algorithm constructs triangles, or polygons, that represent the visibility relative to the oring. This visibilit is visualized with the Python library Pygame. Numpy is largely used for vector operations.
