@@ -13,7 +13,7 @@ This program utilizes segment segment intersections to calculate polygon-ray int
 ## Performance
 Performance, at best, decreases linearly with the number of vertices present. If we measure performance with fps (frames per second) and let n be the number of vertices, then the performance of the algorithm can be defined as:
 $$ performance(n) \propto {1 \over n} $$
-In reality, the performance is much worse then this linear relationship. For example: 
+In reality, the performance is much worse than this linear relationship. For example: 
 - 5 vertices results in a steady 30 fps.
 - 35 vertices results in 5-15 fps.
 
