@@ -7,9 +7,7 @@ import numpy as np
 import raycaster
 import draw
 from shapes import polygon, line, point
-from math_utils import math_funcs, iter_funcs, polar, numerical
-
-import sort
+from math_utils import math_funcs, polar, numerical, triangulate
 
 import timer
 
@@ -28,16 +26,6 @@ def draw_mouse(surface, xy, DEBUG):
         pg.draw.circle(surface, (0, 255, 0), p2, 5)
 
 
-def is_nested(iterable) -> bool:
-    def is_iter(element) -> bool:
-        if isinstance(element, list):
-            return True
-        if isinstance(element, tuple):
-            return True
-        if isinstance(element, np.ndarray):
-            return True
-        return False
-    return any(is_iter(val) for val in iterable)
 
 def darken_rgb(rgb, sub) -> tuple:
 
@@ -55,9 +43,6 @@ def get_ngon(n, center, radius) -> polygon.Polygon:
     return polygon.Polygon(circle_points)
 
 
-def cast_rays2(ray_pairs, ngons, caster, bounding_rect):
-    for poly in ngons:
-        ...
 
 def group_by_parents(instances) -> dict:
     # instances are points
@@ -139,31 +124,14 @@ def arcs_from_dict(inst_dict, origin) -> list:
     return arcs
 
 
-def trim_arcs(arcs, caster):
-    # trim arcs that are covered by other arcs
-    orig_size = len(arcs)
-    trimmed_arcs = arcs.copy()
-    for i, arc in enumerate(arcs):
-        for j, test_arc in enumerate(arcs):
-            if i != j:
-                # do not need to test equal arcs
-                s1, e1 = tuple(x.as_polar(caster.xy) for x in test_arc)[:]
-                s2, e2 = tuple(x.as_polar(caster.xy) for x in arc)[:]
-                start, end = s2[1], e2[1]
-                if polar.is_in_arc(s1[1], start, end) and polar.is_in_arc(e1[1], start, end):
-                    # is in arc, need to check if the radius is larger
-                    if s1[0] > s2[0]  and e1[0] > e2[0]:
-                        trimmed_arcs[j] = None
-    _arcs = tuple(filter(lambda x: x is not None, trimmed_arcs))
-    return _arcs
 
 #@timer.timer
 def cast_rays(ray_pairs, segments, caster, bounding_ngon):
     intersections = []
     # sort wrt angle
-    ray_pairs.sort(key=lambda pair: math_funcs.cart_to_polar_2D(pair[0], caster.xy)[1])
+    ray_pairs.sort(key=lambda pair: polar.cart_to_polar_2D(pair[0], caster.xy)[1])
     # sort wrt dist
-    ray_pairs.sort(key=lambda pair: math_funcs.cart_to_polar_2D(pair[1], caster.xy)[0])
+    ray_pairs.sort(key=lambda pair: polar.cart_to_polar_2D(pair[1], caster.xy)[0])
     for ray_pair in ray_pairs:
         intersection_point = math_funcs.cast_ray(ray_pair, segments, bounding_ngon)
         if intersection_point is not None:
@@ -318,10 +286,10 @@ def main(DEBUG=False, PRETTY=True):
 
         if len(intersections) > 1 and draw_vis:
             # sort wrt dist
-            intersections.sort(key=lambda p: sort.polar_wrapper(p, caster.xy, 0))
+            intersections.sort(key=lambda p: polar.polar_wrapper(p, caster.xy, 0))
             # sort wrt angle
-            intersections.sort(key=lambda p: sort.polar_wrapper(p, caster.xy, 1))
-            triangles = math_funcs.triangulate_from_origin(caster.xy, intersections, walls, boundary_ngon)
+            intersections.sort(key=lambda p: polar.polar_wrapper(p, caster.xy, 1))
+            triangles = triangulate.triangulate_from_origin(caster.xy, intersections, walls, boundary_ngon)
             if PRETTY:
                 # clean vis surface
                 vis_surface.fill((0, 0, 0, 0))

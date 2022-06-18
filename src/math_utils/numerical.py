@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import math
 
-from math_utils import vector_funcs
-
 # default is 1e-9
 # lower the rel tol since pygame uses integers for pixel representation.
 # Extra precision on float is pointless otherwise.
@@ -11,6 +9,7 @@ from math_utils import vector_funcs
 REL_TOL = 1e-3
 # for values near 0
 ABS_TOL = 1e-3
+
 
 def is_close(a, b) -> bool:
     """Basically float == float. But float == float should not be used!"""
@@ -73,26 +72,6 @@ def distance(start, end) -> float:
     diff_sq = tuple(pow(b-a, 2) for a, b in zip(start, end))
     return math.sqrt(sum(diff_sq))
 
-
-
-def is_on_line(point: tuple[float], start: tuple[float], end: tuple[float]) -> bool:
-    """Determine if a given xy point lies on a line between
-    the start and end."""
-    return vector_funcs.is_point_on_segment(point, start, end)
-'''
-    # use area of a triangle to determine if the point
-    # lies on the line. If on line between start, end
-    # then area = 0
-    # handle trivial cases point == start or point == end
-    if is_array_close(point, start) or is_array_close(point, end):
-        return True
-    else:
-        # test for almost equality since working with floats
-        ac = distance(start, point)
-        cb = distance(point, end)
-        ab = distance(start, end)
-        return is_close(ac + cb, ab)
-'''
 
 if __name__ == "__main__":
     x = 0.3333

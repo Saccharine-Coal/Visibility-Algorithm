@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import math
@@ -10,6 +11,28 @@ from math_utils import numerical, distance
 
 import timer
 
+def triangulate_from_origin(origin, points, ngons, boundary) -> list:
+
+    instances = points
+    counter = None
+    # counter = 0, 1, 2 counter % 2 == 1 only when counter is 2
+    n = len(instances)
+    triangles = []
+    for i, inst in enumerate(instances):
+        if i < n:
+            # if element is last element, next element is first element
+            if i == n - 1:
+                # last element
+                k = 0
+            else:
+                k = i + 1
+            next_inst = instances[k]
+            tri, counter = ff(i, inst, next_inst, counter, ngons, boundary, origin)
+            triangles.append(tri)
+
+        else:
+            break
+    return triangles
 
 def is_vertex_a_midpoint(point, line_pairs) -> bool:
     # point is a vertex

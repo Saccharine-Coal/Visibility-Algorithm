@@ -4,9 +4,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from shapely import geometry
-
-from math_utils import math_funcs, numerical, iter_funcs, coord_conversions, polar
+from math_utils import numerical, iter_funcs, polar, intersection
 
 from shapes import point
 
@@ -14,7 +12,6 @@ from shapes import point
 @dataclass
 class Line:
     """Collection of n points represented by segments. Points must be collinear."""
-    #__slots__ = ("segments", "arrays", "size")
     points: tuple
     origin: tuple
     parent: object = field(default=None)
@@ -78,6 +75,7 @@ class Line:
     def get_topmost_parent(self):
         return self.parent
 
+
 class Segment:
     """A line with only two points."""
     __slots__ = ("start", "end", "arrays", "parent")
@@ -123,7 +121,7 @@ class Segment:
     def collidepoint(self, point) -> bool:
         """Determine if a point is lies on the segment.
         Endpoints are included."""
-        return numerical.is_on_line(point, self.start.xy, self.end.xy)
+        return intersection.is_point_on_segment(point, self.start.xy, self.end.xy)
 
     def vertex_collidepoint(self, point) -> bool:
         start = numerical.is_array_close(point, self.start)

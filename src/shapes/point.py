@@ -4,26 +4,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from shapely import geometry
+from math_utils import polar
 
-from math_utils import math_funcs, numerical, iter_funcs, coord_conversions
 
-'''
-@dataclass
-class PolarPoint:
-    __slots__ = ("rphi")
-    # (r, phi)
-    rphi: np.ndarray
-
-    @property
-    def r(self) -> float:
-        return self.rphi[0]
-
-    @property
-    def phi(self) -> float:
-        return self.rphi[1]
-'''
-
+# TODO: create cartesian and polar point subclasses
 
 @dataclass
 class Point:
@@ -76,7 +60,7 @@ class Point:
     def as_polar(self, polar_origin) -> np.ndarray:
         """Get polar coordinates from cartesian xy relative to the polar_origin."""
         # (r, phi)
-        return coord_conversions.cart_to_polar_2D(self.xy, origin=polar_origin)
+        return polar.cart_to_polar_2D(self.xy, origin=polar_origin)
 
     def get_topmost_parent(self):
         if self.parent is not None:

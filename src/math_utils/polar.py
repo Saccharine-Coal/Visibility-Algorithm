@@ -189,3 +189,13 @@ def maximize_angle(cart_points, origin) -> list:
         polar_to_cart.get(max_pair[0]), polar_to_cart.get(max_pair[1])
     ]
 
+def polar_wrapper(inst, origin, index) -> float:
+    """Function to allow one line sorting of an iterable of points and lines."""
+    if isinstance(inst, line.Line):
+        # is a line
+        # sort wrt first point on line
+        arr = inst.arrays[0]
+    else:
+        # is a point
+        arr = inst.xy
+    return cart_to_polar_2D(arr, origin)[index]

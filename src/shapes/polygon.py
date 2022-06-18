@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-import math
-
 import numpy as np
 
 from shapely import geometry
 
-from math_utils import math_funcs, numerical, iter_funcs, coord_conversions
+from math_utils import numerical, iter_funcs
 
 from shapes import line, point
+
 
 class Polygon:
     """Closed collection of segments. """

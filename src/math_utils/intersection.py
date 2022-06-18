@@ -17,10 +17,6 @@ def get_intersection(p_1, p_2, q_1, q_2, q_infinite=True) -> Union[float, int, N
     @param: q_1, q_2 is line segment 2
     @param: whether line segment 2 is infinite"""
     # handle trivial intersections
-    if numerical.is_on_line(p_1, q_1, q_2):
-        return p_1
-    if numerical.is_on_line(p_2, q_1, q_2):
-        return p_2
     r, s = p_2 - p_1, q_2 - q_1
     r_cross_s = cross = np.cross(r, s)
     q_sub_p = q_1 - p_1
@@ -119,3 +115,31 @@ def line_circle_collision(p_1, p_2, circle_center, circle_radius) -> bool:
         return False
     t = 2*c / (-b + math.sqrt(pre_root))
     return numerical.is_in(t, 0, 1, inclusive=True)
+
+
+def is_collinear(vector_1, vector_2) -> bool:
+    """Collinear if vector_1 X vector_2 == 0"""
+    # cross = np.cross(vector_1, vector_2)
+    return numerical.is_close(np.cross(vector_1, vector_2), 0)
+
+
+def is_point_on_segment(point, start, end) -> bool:
+    """Check if a point lies on a line defined by the line segment [start, end]."""
+    #   https://lucidar.me/en/mathematics/check-if-a-point-belongs-on-a-line-segment/
+    # handle trivial intersections
+    if numerical.is_array_close(point, start) or numerical.is_array_close(point, end):
+        return True
+    # line segment = (a, b) = (start, end)
+    ab, ac = (start - end), (start - point)
+    if is_collinear(ab, ac):
+        # the point lies on an infinite line
+        k_ac = np.dot(ab, ac)
+        k_ab = np.dot(ab, ab)
+        # 3 cases
+        # k_ac == 0
+        # k_ac == k_ab
+        # 0 < k_ac < k_ab
+        # merge into one condition -> 0 < k_ac < k_ab
+        return numerical.is_in(k_ac, 0, k_ab, inclusive=False)
+    # is not collinear thus does not lie on the line
+    return False
