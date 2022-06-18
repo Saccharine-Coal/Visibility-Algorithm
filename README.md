@@ -38,9 +38,9 @@ The dependencies for this project are:
 - [X] Add dependencies
 ### Initial Refactor
 - [ ] Remove commented code
-- [ ] Remove unused code
-- [ ] Remove unused modules
-- [ ] Move similar code in same modules
+- [X] Remove unused code
+- [X] Remove unused modules
+- [X] Move similar code in same modules
 - [ ] Move similar modules in same libs
 - [ ] Add function documentation
 ### Current Bug Squashing
