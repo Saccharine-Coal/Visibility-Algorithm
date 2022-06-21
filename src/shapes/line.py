@@ -11,14 +11,15 @@ from shapes import point
 
 @dataclass
 class Line:
-    """Collection of n points represented by segments. Points must be collinear."""
-    points: tuple
+    """Collection of n points. Points must be collinear."""
+    points: tuple(point.Point)
     origin: tuple
-    parent: object = field(default=None)
+    # parents: tuple = field(init=False,default=None)
 
     def __post_init__(self):
         origin = self.origin
         points = tuple(sorted(self.points, key=lambda p: polar.cart_to_polar_2D(p, origin=origin)[0]))
+        #parents = tuple(p.parent for p in self.points)
         start = points[0]
         rphi = polar.cart_to_polar_2D(start, origin=origin)
         rest = points[1:]
@@ -30,17 +31,14 @@ class Line:
                 #raise ValueError("Given points are not collinear.")
         # points are collinear
         # sort wrt to distance from start
-        points = tuple(sorted(points, key=lambda p: polar.cart_to_polar_2D(p, start)[0]))
+        self.points = tuple(sorted(points, key=lambda p: polar.cart_to_polar_2D(p, start)[0]))
         self.arrays: tuple[np.ndarray] = points
         paired = iter_funcs.pair(points, closed=False)
-        segments = []
-        for pair in paired:
-            seg = Segment(pair[0], pair[1], self)
-            segments.append(seg)
-        self.segments: tuple[Segment] = tuple(segments)
+        #self.segments: tuple[Segment] = tuple(segments)
         self.size: int = len(self.arrays)
         self.rphi = rphi
-        self.has_parent = not (self.parent is None)
+        #self.parents = parents
+        #self.has_parent = all((p is not None) for p in parents)
 
     def __repr__(self) -> str:
         name = self.__class__.__name__
@@ -58,10 +56,12 @@ class Line:
         return vals
 
     def as_points(self):
+        return self.points
         points = []
         for seg in self.segments:
             points.extend(seg.as_points())
         return points
+
     def as_segments(self) -> list[Point]:
         """Get points as a collection of segment pairs.
         p1, p2, p3 ... -> [(p1, p2), (p2, p3) ...]
@@ -73,7 +73,8 @@ class Line:
         raise NotImplementedError
 
     def get_topmost_parent(self):
-        return self.parent
+        raise NotImplementedError
+        return self.parent 
 
 
 class Segment:

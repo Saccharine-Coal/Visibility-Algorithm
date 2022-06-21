@@ -74,6 +74,7 @@ def get_bounding_polar_segment(origin, ngon: polygon) -> line.Segment:
     return line.Segment(left, right, None)
 
 
+'''
 def is_in_arc(point, start, end) -> bool:
     # assume points are all in polar form
     r0, phi0 = point[:]
@@ -82,7 +83,7 @@ def is_in_arc(point, start, end) -> bool:
     # only care about arc angle and not length
     print(is_in_arc(phi0, phi1, phi2))
     return numerical.is_in(phi0, phi1, phi2, inclusive=True)
-
+'''
 
 def is_in_slice():
     """If a point is in a pie slice. Angle and radius are taken into account."""
@@ -199,3 +200,15 @@ def polar_wrapper(inst, origin, index) -> float:
         # is a point
         arr = inst.xy
     return cart_to_polar_2D(arr, origin)[index]
+
+
+
+def in_cart_arc(start, end, points, origin) -> list:
+    in_arc_points = []
+    s, e = cart_to_polar_2D(start, origin), cart_to_polar_2D(end, origin)
+    for i, pnt in enumerate(points):
+        r, phi = cart_to_polar_2D(pnt, origin)[:]
+        if is_in_arc(phi, s[1], e[1]) and r < max(s[0], e[0]):
+            in_arc_points.append(points[i])
+    return in_arc_points
+

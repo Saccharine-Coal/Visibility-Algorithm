@@ -127,8 +127,8 @@ def is_point_on_segment(point, start, end) -> bool:
     """Check if a point lies on a line defined by the line segment [start, end]."""
     #   https://lucidar.me/en/mathematics/check-if-a-point-belongs-on-a-line-segment/
     # handle trivial intersections
-    if numerical.is_array_close(point, start) or numerical.is_array_close(point, end):
-        return True
+    # if numerical.is_array_close(point, start) or numerical.is_array_close(point, end):
+    #    return True
     # line segment = (a, b) = (start, end)
     ab, ac = (start - end), (start - point)
     if is_collinear(ab, ac):
@@ -140,6 +140,6 @@ def is_point_on_segment(point, start, end) -> bool:
         # k_ac == k_ab
         # 0 < k_ac < k_ab
         # merge into one condition -> 0 < k_ac < k_ab
-        return numerical.is_in(k_ac, 0, k_ab, inclusive=False)
+        return numerical.is_in(k_ac, 0, k_ab, inclusive=True)
     # is not collinear thus does not lie on the line
     return False

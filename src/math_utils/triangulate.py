@@ -7,7 +7,7 @@ import numpy as np
 
 from shapes import line, point, polygon
 from math_utils import math_funcs
-from math_utils import numerical, distance
+from math_utils import numerical, distance, polar
 
 import timer
 
@@ -54,7 +54,7 @@ def is_point_on_any_polygon(point, ngons: list[polygon.Polygon]) -> bool:
 
 def get_intersecting_polygon(point, ngons: list[polygon.Polygon]) -> polygon.Polygon:
     for poly in ngons:
-        if poly.on_any_segment(point):
+        if poly.on_any_segment(point) or poly.collidepoint(point):
             return poly
     return None
 
@@ -112,6 +112,7 @@ def ff(i, inst, next_inst, counter, ngons, boundary, origin):
     # (l, p) = (False, True)
     # (l, l) = (False, False)
     #print(inst.parent, next_inst.parent)
+    index = i
     gen = binary_switch
     # if i == 0 or counter is None
     counter_is_none_or_0th = i == 0 or counter is None
@@ -182,7 +183,9 @@ def ff(i, inst, next_inst, counter, ngons, boundary, origin):
                 counter = gen(starting_state=towards)
                 points = get_ordered_points(inst, towards)
                 same_polygon = False
-                if inst.get_topmost_parent() is next_inst.get_topmost_parent():
+                inst_parent = inst.as_points()[0].get_topmost_parent()
+                next_parent = next_inst.get_topmost_parent()
+                if inst_parent is next_parent:
                     # same polygon
                     same_polygon = True
                     for i, point in enumerate(inst.as_points()):
@@ -237,7 +240,7 @@ def ff(i, inst, next_inst, counter, ngons, boundary, origin):
                     if not towards:
                         # remove extrema points
                         points = [points[0]]
-                    collection = [origin, *points, next_inst.cart_xy]
+                    collection = [origin, *points, next_inst.xy]
             towards = next(counter)
         if not next_point:
             # l, l
@@ -250,7 +253,8 @@ def ff(i, inst, next_inst, counter, ngons, boundary, origin):
             # if line, line we need to switch the state immediately
             towards = not towards # this is wrong
             next_points = get_ordered_points(next_inst, towards)
-            inst_parent, next_parent = inst.get_topmost_parent(), next_inst.get_topmost_parent()
+            inst_parent = inst.as_points()[0].get_topmost_parent()
+            next_parent = next_inst.as_points()[0].get_topmost_parent()
             if inst_parent is next_parent:
                 # they are the same polygon so we only want the closest points
                 # get the points on the each line that are on the same polygon
@@ -259,38 +263,37 @@ def ff(i, inst, next_inst, counter, ngons, boundary, origin):
                     # arc is not needed
                     collection = [*points, origin, next_points]
                 else:
-                    parent = inst.get_topmost_parent()
                     p = inst.as_points()[0]
                     n = next_inst.as_points()[0]
-                    _points = parent.get_arc(p, n, origin)
+                    _points = inst_parent.get_arc(p, n, origin)
                     collection = [origin, *_points]
             else:
                 # lines are not immediately intersecting the same polygon
                 # points on the lines may intersect same polygons at different depths
-                
+
                 # {int, (list #, i in list)}
+                arcs = []
                 id_to_index = {}
                 for i, pnt in enumerate(inst.as_points()):
-                    parent = get_intersecting_polygon(pnt, ngons)
+                    parent = pnt.parent
                     if parent is not None:
-                        #id_to_index[id(parent)] = 
-                        id_to_index.setdefault(id(parent), []).append(pnt)
+                        id_to_index.setdefault(id(parent), [])
+                        id_to_index[id(parent)].append(pnt)
                 for i, pnt in enumerate(next_inst.as_points()):
-                    parent = get_intersecting_polygon(pnt, ngons)
+                    parent = pnt.parent
                     if parent is not None:
-                        #id_to_index[id(parent)] = 
-                        id_to_index.setdefault(id(parent), []).append(pnt)
-                arc = []
+                        id_to_index.setdefault(id(parent), [])
+                        id_to_index[id(parent)].append(pnt)
                 for ngon_id, points in id_to_index.items():
                     if len(points) > 1:
                         # this is a polygon that both lines intersect
                         start, end = points[:]
                         for poly in ngons:
                             if id(poly) == ngon_id:
-                                break
-                        arc = poly.get_arc(start, end, origin)
-                collection = [origin, *inst.as_arrays(reverse=towards), *arc, *next_inst.as_arrays(reverse=towards)]
-                if len(arc) == 0:
+                                arc = poly.get_arc(start, end, origin)
+                                arcs.extend(arc)
+                collection = [origin, *inst.as_arrays(reverse=not towards), *arcs, *next_inst.as_arrays(reverse=towards)]
+                if len(arcs) == 0:
                     # lines never intersect the same polygon
                     collection = [*inst.as_arrays(reverse=not towards), origin, *next_inst.as_arrays(reverse=towards)]
             towards = next(counter)

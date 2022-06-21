@@ -4,7 +4,7 @@ import numpy as np
 
 from shapely import geometry
 
-from math_utils import numerical, iter_funcs
+from math_utils import numerical, iter_funcs, distance, polar
 
 from shapes import line, point
 
@@ -103,7 +103,6 @@ class Polygon:
         return self
 
 
-
     def get_arc(self, start, end, origin) -> list:
 
         def mean(vals) -> float:
@@ -113,45 +112,59 @@ class Polygon:
             x_vals = tuple(xy[0] for xy in tuples)
             y_vals = tuple(xy[1] for xy in tuples)
             return (mean(x_vals), mean(y_vals))
+        if numerical.is_array_close(start.xy, end.xy):
+            return (start, end)
+
         if self.size == 3:
             # is a triangle
-            if not (self.is_a_vertex(start) and self.is_a_vertex(end)):
+            min_point = min(self.arrays, key=lambda p: numerical.distance(p, origin))
+            return (start, min_point, end)
+            if False or not (self.is_a_vertex(start) and self.is_a_vertex(end)):
                 # both are not vertices
+                
                 return (start, end)
+            else:
+                arrays = list(self.as_arrays())
+                for i, arr in enumerate(reversed(self.as_arrays())):
+                    j = self.size - 1 - i
+                    if numerical.is_array_close(start.xy, arr):
+                        arrays.pop(j)
+                    if numerical.is_array_close(end.xy, arr):
+                        arrays.pop(j)
+
+
+                min_point = min(arrays, key=lambda p: numerical.distance(p, origin))
+                return (start, min_point, end)
         if True: #or self.on_any_segment(start) and self.on_any_segment(end):
             #print(self.is_a_vertex(start), self.is_a_vertex(end))
+            arrays = list(self.as_arrays())
+            for i, arr in enumerate(reversed(self.as_arrays())):
+                j = self.size - 1 - i
+                if numerical.is_array_close(start.xy, arr):
+                    arrays.pop(j)
+                if numerical.is_array_close(end.xy, arr):
+                    arrays.pop(j)
+
+            arc = polar.in_cart_arc(start, end, arrays, origin)
+            arc = sorted(arc, key=lambda p: polar.cart_to_polar_2D(p, origin)[1])
+            return (start, *arc, end)
+            # sort wrt dist
+            #arc = sorted(arc, key=lambda p: polar.cart_to_polar_2D(p, origin)[0])
+            # sort wrt angle
+            return sorted(arc, key=lambda p: polar.cart_to_polar_2D(p, origin)[1])
+            return (start, end)
             a = b = -1
             points = self.as_points()
             segments = self.as_segments()
             # not a vertex
-            for i, seg in enumerate(segments):
-                if seg.collidepoint(start):
-                    # check the first point of the segment
-                    if i == len(segments) - 1:
-                        a = i
-                        break
-                    next_seg = self.as_segments()[i+1]
-                    x, y = seg.as_arrays()[0], next_seg.as_arrays()[0]
-                    if numerical.distance(x, start) > numerical.distance(y, start):
-                        a = i + 1
-                    else:
-                        a = i
-                    break
-
-            for i, seg in enumerate(segments):
-                if seg.collidepoint(end):
-                    if i == len(segments) - 1:
-                        b = i
-                        break
-                    next_seg = self.as_segments()[i+1]
-                    x, y = seg.as_arrays()[0], next_seg.as_arrays()[0]
-                    if numerical.distance(x, end) > numerical.distance(y, end):
-                        b = i + 1
-                    else:
-                        b = i
-                    break
-            if (a == -1) or (b == -1):
-                return (start, end)
+            min_seg = min(self.segments, key=lambda seg: distance.point_to_line(start, *seg.as_arrays(), infinite=False))
+            a = self.segments.index(min_seg)
+            if numerical.is_above(numerical.distance(start, min_seg.arrays[0]), numerical.distance(start, min_seg.arrays[1])):
+                a += 1
+            min_seg = min(self.segments, key=lambda seg: distance.point_to_line(end, *seg.as_arrays(), infinite=False))
+            b = self.segments.index(min_seg)
+            if numerical.is_above(numerical.distance(end, min_seg.arrays[0]), numerical.distance(end, min_seg.arrays[1])):
+                b += 1
             if a == b:
                 return (start, points[a], end)
             if a > b:
@@ -160,7 +173,17 @@ class Polygon:
             # do not want to include endpoints as they are
             # defined by start, end
             inner = points[a:b+1]
+            inner = polar.in_cart_arc(start, end, inner, origin)
             outer = points[b:] + points[:a+1]
+            outer = polar.in_cart_arc(start, end, outer, origin)
+            if not inner or not outer:
+                # inner is empty
+                if outer:
+                    return (start, *outer, end)
+                if inner:
+                    return (start, *inner, end)
+                return (start, end)
+
             i_mean = xy_mean(inner)
             o_mean = xy_mean(outer)
             i_dist = numerical.distance(origin, i_mean)
@@ -169,7 +192,4 @@ class Polygon:
                 arc = inner
             else:
                 arc = outer
-            #arc = list(arc)
-            #arc.pop(b)
-            #arc.pop(a)
             return (start, *arc, end)

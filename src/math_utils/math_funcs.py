@@ -37,24 +37,25 @@ def pair(iterable, collinear_indices=None, closed=True):
         raise ValueError
 
 
-def cast_ray(ray_pair: tuple[tuple], line_pairs: list, bounds: pg.Rect=None, vertices_only=True) -> Union[point.Point, line.Line]:
-    poi_list = get_closest_intersection(ray_pair, line_pairs, bounds, vertices_only)
+def cast_ray(ray_pair: tuple[tuple], line_pairs: list, bounds: pg.Rect=None, recursive=False) -> Union[point.Point, line.Line]:
+    poi_list = get_closest_intersection(ray_pair, line_pairs, bounds, recursive=recursive)
     if isinstance(poi_list, list):
         return None
     return poi_list
 
 
 #@timer.timer
-def get_closest_intersection(ray_pair: tuple[tuple], segments: list, bounds: polygon.Polygon, vertices_only=True) -> list[Union[None, tuple]]:
+def get_closest_intersection(ray_pair: tuple[tuple], segments: list, bounds: polygon.Polygon, recursive=False) -> list[Union[None, tuple]]:
     """Get the closest vertex intersection for a given ray pair: (ray start, ray end).
-    @return None or tuple from line_pairs"""
+    @param recursive, recursive will recast the given ray until an obstacle is reached
+    @return None, Point object, or Line object"""
     # sort segments wrt of point to segment
     segments = sorted(segments, key=lambda seg: distance.point_to_line(ray_pair[0], seg.start.xy, seg.end.xy, infinite=False))
     # we are always casting to a vertex which is a poi
     MIN_POI = 4
     possible_min_poi = []
-    infinite_ray = not vertices_only
-    for i, seg in enumerate(segments):
+    infinite_ray = recursive
+    for seg in segments:
         arrays = seg.as_arrays()
         poi = intersection.get_intersection(*arrays, *ray_pair, q_infinite=infinite_ray)
         if poi is not None:
@@ -62,7 +63,7 @@ def get_closest_intersection(ray_pair: tuple[tuple], segments: list, bounds: pol
             possible_min_poi.append((poi, dist, seg.get_topmost_parent()))
             if len(possible_min_poi) >= MIN_POI:
                 break
-    if len(possible_min_poi) == 0:
+    if not possible_min_poi:
         # cast ray on bounds if the list is empty
         for seg in bounds.as_segments():
             poi = intersection.get_intersection(*seg.as_arrays(), *ray_pair, q_infinite=infinite_ray)
@@ -71,44 +72,37 @@ def get_closest_intersection(ray_pair: tuple[tuple], segments: list, bounds: pol
                 possible_min_poi.append((poi, dist, seg.get_topmost_parent()))
                 break
     # check if list is empty
-    if len(possible_min_poi) != 0: #or len(poi_and_dist) != 0:
+    if possible_min_poi:
         # minimize w.r.t. euclidean dist
         possible_min_poi.sort(key=lambda p: p[1])
         min_poi = possible_min_poi[0][0]
         parent = possible_min_poi[0][2]
-        #min_poi = min(poi_and_dist, key=lambda tup: tup[1])[0]
-        # determine whether this min_poi is a vertex
-        if not vertices_only:
+        if recursive:
             # will only occur on recursion
-            return [min_poi]
+            return [point.Point(min_poi, parent)]
         if parent is bounds:
             # hits bound so recursion is not needed
             return point.Point(min_poi, bounds)
+        # need to figure out of the ray can continue
         if parent.is_a_vertex(min_poi):
-            # 2 cases: point or line
-            # the parent of either case will be a polygon
-            # only care if the point is a vertex
-            # recast the ray recursively unless it is a boundary vertex
-            # we need to check whether recasting the ray ends up in a polygon or not
-            # new ray = min_poi + normalized ray
             ray_start, ray_end = ray_pair[:]
             norm_ray = normalize(ray_end-ray_start)
             # determine if new ray end is in the polygon the it intersects
-            new_ray_end = min_poi + i*norm_ray
+            new_ray_end = min_poi + norm_ray
             if parent.collidepoint(new_ray_end):
                 return [point.Point(min_poi, parent)]
             # is likely not in a polygon, so we recast the ray
             trimmed_segs = remove_vertex_endpoint(min_poi, segments)
             ray_pair = (ray_pair[0], min_poi)
-            _iter = [min_poi]
-            recursive_poi = get_closest_intersection(ray_pair, trimmed_segs, bounds=bounds, vertices_only=False)
-            # a ray shoudd never cross the same polygon 2 times
+            _iter = [point.Point(min_poi, parent)]
+            recursive_poi = get_closest_intersection(ray_pair, trimmed_segs, bounds=bounds, recursive=True)
+            # a ray should never cross the same polygon 2 times
             for pnt in recursive_poi:
-                if parent.collidepoint(pnt):
+                if parent is pnt.parent:
                     return [point.Point(min_poi, parent)]
             _iter.extend(recursive_poi)
             # construct line object
-            _line = line.Line(_iter, ray_pair[0], parent)
+            _line = line.Line(_iter, ray_pair[0])
             return _line
     return []
 

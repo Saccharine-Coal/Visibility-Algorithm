@@ -126,14 +126,14 @@ def arcs_from_dict(inst_dict, origin) -> list:
 
 
 #@timer.timer
-def cast_rays(ray_pairs, segments, caster, bounding_ngon):
+def cast_rays(ray_pairs, segments, caster, bounding_ngon, recursive=False):
     intersections = []
     # sort wrt angle
     ray_pairs.sort(key=lambda pair: polar.cart_to_polar_2D(pair[0], caster.xy)[1])
     # sort wrt dist
     ray_pairs.sort(key=lambda pair: polar.cart_to_polar_2D(pair[1], caster.xy)[0])
     for ray_pair in ray_pairs:
-        intersection_point = math_funcs.cast_ray(ray_pair, segments, bounding_ngon)
+        intersection_point = math_funcs.cast_ray(ray_pair, segments, bounding_ngon, recursive=False)
         if intersection_point is not None:
             intersections.append(intersection_point)
     return intersections
@@ -171,7 +171,7 @@ def draw_triangles(screen, DEBUG, triangles, hollow=False):
             else:
                 pg.draw.polygon(screen, YELLOW, tri, width=4)
 
-def main(DEBUG=False, PRETTY=True):
+def main(DEBUG=False, PRETTY=True, PROFILING=False):
     # PRETTY is fancy graphics and no debug utils
     pg.init()
 
@@ -187,9 +187,7 @@ def main(DEBUG=False, PRETTY=True):
     x3, y3 = 100, 100
     r = 25
     r3 = 10
-    #wall_1 = polygon.Polygon([(100+0, y+(5*r)), (100+(4.755*r), 100+(1.545*r))])#, (x+(2.939*r), y+(-4.045*r)), (x+(-2.939*r), y+(-4.045*r)), (x+(-4.755*r), y+(1.545*r))])
 
-    wall_2 = polygon.Polygon([(x+0, y+(5*r)), (x+(4.755*r), y+(1.545*r)), (x+(2.939*r), y+(-4.045*r)), (x+(-2.939*r), y+(-4.045*r)), (x+(-4.755*r), y+(1.545*r))])
 
     wall_3 = polygon.Polygon([(x3+0, y3+(5*r3)), (x3+(4.755*r3), y3+(1.545*r3)), (x3+(2.939*r3), y3+(-4.045*r3)), (x3+(-2.939*r3), y3+(-4.045*r3)), (x3+(-4.755*r3), y3+(1.545*r3))])
     r = 50
@@ -200,9 +198,14 @@ def main(DEBUG=False, PRETTY=True):
     circle_3 = get_ngon(9, (100, 300), 50)
     circle_4 = get_ngon(5, (100, 425), 30)
     circle_5 = get_ngon(11, (400, 400), 30)
-    walls = [wall_3, circle, circle_2, circle_3, circle_4, circle_5]
+    circle_6 = get_ngon(20, (400, 150), 50)
+    walls = [wall_3, circle, circle_2, circle_3, circle_4, circle_5, circle_6]
     # bounding rect
     bounding_rect = pg.Rect((0, 0,), (450, 450))
+    if PRETTY:
+        # make bounds of rect outside screen dimension
+        bounding_rect.inflate_ip(100, 100)
+
     bounding_rect.center = screen.get_rect().center
     boundary_ngon = polygon.Polygon(math_funcs.get_points_from_rect(bounding_rect, for_pairing=False))
     # ray caster origin
@@ -239,19 +242,29 @@ def main(DEBUG=False, PRETTY=True):
     pg.draw.rect(polygon_surface, (255, 255, 255), bounding_rect, width=4)
     pg.draw.rect(polygon_surface, (255, 255, 255), bounding_rect.inflate(8, 8), width=4)
     for wall in walls:
-        draw.draw_polygon(polygon_surface, wall.as_arrays(), line_color=(255, 255, 255), point_color=(200, 0, 0), width=3)
+        if DEBUG:
+            draw.draw_polygon(polygon_surface, wall.as_arrays(), line_color=(255, 255, 255), point_color=(200, 0, 0), width=3)
+        else:
+            pg.draw.polygon(polygon_surface, (255, 255, 255), wall.as_arrays(), width=3)
     previous_pos = [0, 0]
     # GAME LOOP
     intersections = []
     arcs = []
     draw_vis = True
+    TICKS = 3000
+    ticks = 0
+    in_ngon = False
     while running:
-        clock.tick(30)
+        ticks += clock.tick(30)
+        if ticks >= TICKS:
+            if PROFILING:
+                running=False
         print(f'fps={clock.get_fps():.0f}')
         caster.update()
         new_pos = caster.xy
         update = False
         if not numerical.is_array_close(previous_pos, new_pos):
+            in_ngon = False
             update = draw_vis = True
             # check if caster is in any polygons
             # stuff breaks, so it's easier to prevent
@@ -259,11 +272,14 @@ def main(DEBUG=False, PRETTY=True):
             for ngon in walls:
                 if ngon.collidepoint(caster.xy):
                     update = draw_vis = False
+                    in_ngon = ngon
                     break
             # check if outside bounding ngon
             if not boundary_ngon.collidepoint(caster.xy):
                 update = draw_vis = False
         previous_pos = new_pos
+        if PROFILING:
+            update = draw_vis = True
         # Did the user click the window close button?
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -281,8 +297,26 @@ def main(DEBUG=False, PRETTY=True):
                     ray_pairs.append(ray_pair)
             ray_pairs.extend(tuple((caster.xy, p) for p in boundary_ngon.as_arrays()))
             # THIS IS THE LARGEST BOTTLENECK
-            intersections = cast_rays(ray_pairs, segments, caster, boundary_ngon)
+            intersections = cast_rays(ray_pairs, segments, caster, boundary_ngon, recursive=False)
         screen.fill((0, 0, 0))
+
+        if in_ngon:
+            vis_surface.fill((0, 0, 0, 0))
+            pg.draw.polygon(vis_surface, (255, 255, 0), in_ngon.as_points())
+            rad_surface.fill((0, 0, 0, 0))
+            # draw expanding circles
+            radius = 5
+            yellow = (255, 255, 0)
+            START, STOP, STEP = 60, -1, -1
+            RANGE = abs(abs(START) - abs(STEP)) + 1
+            for i in range(START, STOP, STEP):
+                val = 255 - (255*(i / (RANGE)))
+                alpha = min(val, 255)
+                color = (*yellow, alpha)
+                pg.draw.circle(rad_surface, color, caster.xy, radius*i)
+            vis_surface.blit(rad_surface, (0, 0), special_flags=pg.BLEND_RGBA_MIN)
+            screen.blit(vis_surface, (0, 0))
+
 
         if len(intersections) > 1 and draw_vis:
             # sort wrt dist
@@ -325,6 +359,7 @@ def main(DEBUG=False, PRETTY=True):
 
         screen.blit(polygon_surface, (0, 0))
         draw_mouse(screen, caster.xy, DEBUG)
+
         pg.display.flip()
 
     # Done! Time to quit.
@@ -332,4 +367,7 @@ def main(DEBUG=False, PRETTY=True):
     return 0
 
 
-main(DEBUG=False, PRETTY=True)
+# main(DEBUG=False, PRETTY=True, PROFILING=True)
+
+
+

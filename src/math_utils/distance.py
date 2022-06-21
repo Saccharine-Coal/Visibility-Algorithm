@@ -41,6 +41,7 @@ def point_to_line(point, seg_start, seg_end, infinite=False) -> float:
         a, b = (x2 - x1), (y2 - y1)
         denom = np.linalg.norm(p2 - p1)
         if numerical.is_close(denom, 0):
+            return True
             # p1 = p2
             # check if p1 = p2 = p3, point equality
             return numerical.is_array_close(p1, p3)

@@ -19,7 +19,7 @@ class Point:
     def __repr__(self) -> str:
         name = self.__class__.__name__
         has_parent = not (self.parent is None)
-        return f"name(xy={self.xy}, has_parent={has_parent})"
+        return f"{name}(xy={self.xy}, has_parent={has_parent})"
 
     def __post_init__(self):
         # type and value checking
